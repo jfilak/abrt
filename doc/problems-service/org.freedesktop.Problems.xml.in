@@ -54,7 +54,7 @@
                             <varlistentry>
                                 <term>uid</term>
                                 <listitem>
-                                    <para>Only a user with root priviledges can pass this field. For all other users the field is filled by caller's uid.</para>
+                                    <para>Only a user with root privileges can pass this field. For all other users the field is filled by caller's uid.</para>
                                 </listitem>
                             </varlistentry>
                             <varlistentry>
@@ -773,8 +773,8 @@ for prblmprx in problems.GetProblems():
             <method name='Authorize'>
                 <tp:docstring></tp:docstring>
 
-                <arg type='s' name='window-id' direction='in'>
-                    <tp:docstring>A window handle to use when showing a pop up.</tp:docstring>
+                <arg type='x' name='timestamp_from' direction='in'>
+                    <tp:docstring>Beginning of required time range.</tp:docstring>
                 </arg>
 
                 <arg type='b' name='synchronous' direction='in'>
