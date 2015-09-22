@@ -19,6 +19,7 @@
 #include "libabrt.h"
 #include "abrt_problems2_entry_node.h"
 #include "abrt_problems2_service.h"
+#include <gio/gunixfdlist.h>
 
 struct p2e_node
 {
@@ -170,27 +171,115 @@ static void dbus_method_call(GDBusConnection *connection,
         return;
     }
 
-    if (strcmp(method_name, "GetSemanticElement") == 0);
+    if (strcmp(method_name, "GetSemanticElement") == 0)
     {
         return;
     }
 
-    if (strcmp(method_name, "SetSemanticElement") == 0);
+    if (strcmp(method_name, "SetSemanticElement") == 0)
     {
         return;
     }
 
-    if (strcmp(method_name, "ReadElements") == 0);
+    if (strcmp(method_name, "ReadElements") == 0)
+    {
+        GUnixFDList *fds = g_unix_fd_list_new();
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE("a{sv}"));
+
+        GVariant *elements_param = g_variant_get_child_value(parameters, 0);
+
+        gint flags;
+        g_variant_get_child(parameters, 1, "i", &flags);
+
+        GVariantIter iter;
+        GVariant *item;
+        g_variant_iter_init(&iter, elements_param);
+        while ((item = g_variant_iter_next_value(&iter)))
+        {
+            const char *name = g_variant_get_string(item, /*length*/NULL);
+            log_debug("Reading element: %s", name);
+
+            if (!str_is_correct_filename(name))
+            {
+                error_msg("Attempt to read prohibited data: '%s'", name);
+                goto next_read_element_param;
+            }
+
+            if (!dd_exist(dd, name))
+            {
+                log_debug("Element does not exist: %s", name);
+                goto next_read_element_param;
+            }
+
+            int elem_type = 0;
+            char *data = NULL;
+            int fd = -1;
+            int r = problem_data_load_dump_dir_element(dd, name, &data, &elem_type, &fd);
+            if (r < 0)
+            {
+                error_msg("Failed to open %s: %s", name, strerror(-r));
+                goto next_read_element_param;
+            }
+
+            if (   ((flags & 0x04) && !(elem_type & CD_FLAG_TXT))
+                || ((flags & 0x08) && !(elem_type & CD_FLAG_BIGTXT))
+                || ((flags & 0x10) && !(elem_type & CD_FLAG_BIN))
+               )
+            {
+                log_debug("Element is not of the requested type: %s", name);
+                free(data);
+                close(fd);
+                goto next_read_element_param;
+            }
+
+            if (   (flags & 0x1)
+                || (elem_type & CD_FLAG_BIGTXT)
+                || (elem_type & CD_FLAG_BIN))
+            {
+                free(data);
+                lseek(fd, 0, SEEK_SET);
+
+                GError *error = NULL;
+                gint pos = g_unix_fd_list_append(fds, fd, &error);
+                if (error != NULL)
+                {
+                    error_msg("Failed to add file descriptor of %s: %s", name, error->message);
+                    g_error_free(error);
+                    close(fd);
+                    goto next_read_element_param;
+                }
+
+                log_debug("Adding new Unix FD at position: %d",  pos);
+                g_variant_builder_add(&builder, "{sv}", name, g_variant_new("h", pos));
+                goto next_read_element_param;
+            }
+
+            log_debug("Adding element data");
+            g_variant_builder_add(&builder, "{sv}", name, g_variant_new_string(data));
+            free(data);
+            close(fd);
+
+next_read_element_param:
+            g_variant_unref(item);
+        }
+
+        g_variant_unref(elements_param);
+
+        log_debug("Going to reply with GUnixFDList");
+        GVariant *retval_body[1];
+        retval_body[0] = g_variant_builder_end(&builder);
+        GVariant *retval = g_variant_new_tuple(retval_body, ARRAY_SIZE(retval_body));
+        g_dbus_method_invocation_return_value_with_unix_fd_list(invocation, retval, fds);
+        return;
+    }
+
+    if (strcmp(method_name, "SaveElements") == 0)
     {
         return;
     }
 
-    if (strcmp(method_name, "SaveElements") == 0);
-    {
-        return;
-    }
-
-    if (strcmp(method_name, "DeleteElements") == 0);
+    if (strcmp(method_name, "DeleteElements") == 0)
     {
         return;
     }
