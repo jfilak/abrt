@@ -273,10 +273,17 @@ def harvest_vmcore(crash_dir):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
+
     parser.add_argument("--kdump", default="/etc/kdump.conf",
                         help="path to kdump.conf")
+
+    parser.add_argument("--crashdir", default=None
+                        help="path in which vmcore is saved")
+
     args = parser.parse_args()
 
-    crash_dir = parse_kdump(args.kdump)
+    crash_dir = args.crashdir
+    if not crash_dir:
+        crash_dir = parse_kdump(args.kdump)
 
     harvest_vmcore(crash_dir)
