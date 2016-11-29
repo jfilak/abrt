@@ -19,7 +19,6 @@ from subprocess import Popen, PIPE
 import problem
 import report
 
-
 def errx(message, code=1):
     sys.stderr.write(message)
     sys.stderr.write("\n")
@@ -84,6 +83,9 @@ def parse_kdump(kdump_conf_path="/etc/kdump.conf"):
     kdump_path = aug_obj.get("/files%s/path" % kdump_conf_path)
     if kdump_path:
         dump_path = kdump_path
+    elif report.verbose > 0:
+        sys.stdout.write("No 'path' option in '%s', using '%s'\n"
+                         % (kdump_conf_path, dump_path))
 
     # default
     partition = None
@@ -91,14 +93,19 @@ def parse_kdump(kdump_conf_path="/etc/kdump.conf"):
     for fs_type in fs_types:
         result = aug_obj.get("/files%s/%s" % (kdump_conf_path, fs_type))
         if result:
+            report.log_info("For file system '%s' found partition '%s'"
+                            % (fs_type, result))
             partition = result
             break
+    else:
+       report.log_info("No file system specified in '%s'")
 
     if partition:
         if os.path.isabs(dump_path):
             # path is absolute, change it to relative
             dump_path = dump_path.lstrip("/")
         mount_point = get_mount_point(partition)
+        report.log_info("Partition '%s' 
         path = os.path.join(mount_point, dump_path)
     else:
         path = dump_path
@@ -280,7 +287,13 @@ if __name__ == '__main__':
     parser.add_argument("--crashdir", default=None
                         help="path in which vmcore is saved")
 
+    parser.add_argument("--v", "--verbose", default=0, action="count",
+                        help="print verbose messages")
+
     args = parser.parse_args()
+
+    report.verbose += args.verbose
+    report.set_verbosity(report.verbose)
 
     crash_dir = args.crashdir
     if not crash_dir:
