@@ -29,6 +29,7 @@ char *        g_settings_autoreporting_event = NULL;
 bool          g_settings_shortenedreporting = 0;
 bool          g_settings_explorechroots = 0;
 unsigned int  g_settings_debug_level = 0;
+char *        g_settings_sysroot_path = NULL;
 
 void free_abrt_conf_data()
 {
@@ -154,6 +155,31 @@ static void ParseCommon(map_string_t *settings, const char *conf_filename)
         else
             g_settings_debug_level = ul;
         remove_map_string_item(settings, "DebugLevel");
+    }
+
+    value = get_map_string_item_or_NULL(settings, "SysRootPath");
+    if (value)
+    {
+        g_settings_sysroot_path = xstrdup_normalized_path(value);
+        remove_map_string_item(settings, "SysRootPath");
+    }
+
+    {
+        char *env_sys_root = getenv(ABRT_SYSROOT_PATH_ENV);
+        if (env_sys_root != NULL)
+        {
+            free(g_settings_sysroot_path);
+            g_settings_sysroot_path = xstrdup_normalized_path(env_sys_root);
+            log_debug("Setting SysRootPath to %s form %s",
+                        g_settings_sysroot_path, ABRT_SYSROOT_PATH_ENV);
+        }
+    }
+
+    if (g_settings_sysroot_path != NULL && g_settings_sysroot_path[0] != '/')
+    {
+        error_msg("SysRootPath does not start with '/', falling back to the default.");
+        free(g_settings_sysroot_path);
+        g_settings_sysroot_path = NULL;
     }
 
     GHashTableIter iter;

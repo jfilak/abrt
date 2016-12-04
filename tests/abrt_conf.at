@@ -172,3 +172,103 @@ int main(int argc, char *argv[])
     return 0;
 }
 ]])
+
+AT_TESTFUN([SysRootPath], [[
+#include "libabrt.h"
+#include <libreport/helpers/testsuite.h>
+#include <assert.h>
+
+struct result
+{
+    const char *line;
+    const char *const *global_option;
+    const char *expected;
+};
+
+void test(struct result **res)
+{
+    char conf_file[] = "/tmp/abrt_test.conf.XXXXXX";
+    int conf_fd = mkstemp(conf_file);
+    assert(conf_fd >= 0 && "Temporary test configuration file");
+
+    printf("**** %s\n", conf_file);
+    for (struct result **iter = res; NULL != *iter; ++iter)
+    {
+        if ((*iter)->line != NULL)
+        {
+            printf("---- %s", (*iter)->line);
+            full_write_str(conf_fd, (*iter)->line);
+        }
+    }
+    puts("----");
+
+    close(conf_fd);
+
+    setenv("ABRT_DEFAULT_CONF_DIR", "/tmp", 1);
+    setenv("ABRT_CONF_DIR", "/tmp", 1);
+    setenv("ABRT_CONF_FILE_NAME", strrchr(conf_file, '/') + 1, 1);
+
+    load_abrt_conf();
+
+    unsetenv("ABRT_CONF_FILE_NAME");
+    unsetenv("ABRT_CONF_DIR");
+    unsetenv("ABRT_DEFAULT_CONF_DIR");
+
+    for (struct result **iter = res; NULL != *iter; ++iter) {
+        TS_ASSERT_STRING_EQ(*(*iter)->global_option, (*iter)->expected, "Configured value");
+    }
+
+    free_abrt_conf_data();
+}
+
+TS_MAIN
+{
+    {
+        struct result res_sysroot_path = {
+            .line = "\n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = NULL,
+        };
+
+        struct result *results[] = {
+            &res_sysroot_path,
+            NULL,
+        };
+
+        test(results);
+    }
+
+    {
+        struct result res_sysroot_path = {
+            .line = "SysRootPath = /host\n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/host",
+        };
+
+        struct result *results[] = {
+            &res_sysroot_path,
+            NULL,
+        };
+
+        test(results);
+    }
+
+    {
+        struct result res_sysroot_path = {
+            .line = "SysRootPath = /from/env\n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/sysroot/path",
+        };
+
+        struct result *results[] = {
+            &res_sysroot_path,
+            NULL,
+        };
+
+        xsetenv(ABRT_SYSROOT_PATH_ENV, "/sysroot/path");
+        test(results);
+        unsetenv(ABRT_SYSROOT_PATH_ENV);
+    }
+}
+TS_RETURN_MAIN
+]])

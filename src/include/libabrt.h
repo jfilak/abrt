@@ -24,6 +24,11 @@
 extern "C" {
 #endif
 
+/* @brief Defines name of the environment variable used to configure
+ *        the SysRootPath configuration option from abrt.conf
+ */
+#define ABRT_SYSROOT_PATH_ENV "ABRT_SYSROOT_PATH"
+
 /* Some libc's forget to declare these, do it ourself */
 extern char **environ;
 #if defined(__GLIBC__) && __GLIBC__ < 2
@@ -83,6 +88,8 @@ extern bool          g_settings_shortenedreporting;
 extern bool          g_settings_explorechroots;
 #define g_settings_debug_level abrt_g_settings_debug_level
 extern unsigned int  g_settings_debug_level;
+#define g_settings_sysroot_path abrt_g_settings_sysroot_path
+extern char *        g_settings_sysroot_path;
 
 
 #define load_abrt_conf abrt_load_abrt_conf

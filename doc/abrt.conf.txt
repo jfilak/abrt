@@ -36,6 +36,12 @@ DeleteUploaded = 'yes/no'::
    or not.
    The default value is 'no'.
 
+SysRootPath = /::
+   Tell ABRT tools that the system's root file system lives on the configured
+   path and ABRT must honor this path when gathering system information. This
+   configuration option can be set via the ABRT_SYSROOT_PATH environment
+   variable. The environment variable takes precedence.
+
 DebugLevel = '0-100'::
    Allows ABRT tools to detect problems in ABRT itself. By increasing the value
    you can force ABRT to detect, process and report problems in ABRT. You have
