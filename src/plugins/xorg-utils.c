@@ -90,6 +90,9 @@ void xorg_crash_info_print_crash(struct xorg_crash_info *crash_info)
 
 int xorg_crash_info_save_in_dump_dir(struct xorg_crash_info *crash_info, struct dump_dir *dd)
 {
+    if (g_settings_sysroot_path != NULL)
+        dd_save_text(dd, FILENAME_ROOTDIR, g_settings_sysroot_path);
+
     dd_save_text(dd, FILENAME_ABRT_VERSION, VERSION);
     dd_save_text(dd, FILENAME_ANALYZER, "abrt-xorg");
     dd_save_text(dd, FILENAME_TYPE, "xorg");

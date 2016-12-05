@@ -110,7 +110,7 @@ unsigned abrt_oops_create_dump_dirs(GList *oops_list, const char *dump_location,
         struct dump_dir *dd = dd_create(path, /*fs owner*/0, DEFAULT_DUMP_DIR_MODE);
         if (dd)
         {
-            dd_create_basic_files(dd, /*no uid*/(uid_t)-1L, NULL);
+            dd_create_basic_files(dd, /*no uid*/(uid_t)-1L, g_settings_sysroot_path);
             abrt_oops_save_data_in_dump_dir(dd, (char*)g_list_nth_data(oops_list, idx++), proc_modules);
             dd_save_text(dd, FILENAME_ABRT_VERSION, VERSION);
             dd_save_text(dd, FILENAME_ANALYZER, "abrt-oops");
