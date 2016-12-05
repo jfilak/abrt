@@ -241,6 +241,17 @@ char *run_unstrip_n(const char *dump_dir_name, unsigned timeout_sec)
 
 char *get_backtrace(const char *dump_dir_name, unsigned timeout_sec, const char *debuginfo_dirs)
 {
+    return get_backtrace_in_sysroot(dump_dir_name,
+                                   timeout_sec,
+                                   debuginfo_dirs,
+                                   NULL);
+}
+
+char *get_backtrace_in_sysroot(const char *dump_dir_name,
+                               unsigned timeout_sec,
+                               const char *debuginfo_dirs,
+                               const char *sysroot)
+{
     INITIALIZE_LIBABRT();
 
     struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
@@ -259,7 +270,7 @@ char *get_backtrace(const char *dump_dir_name, unsigned timeout_sec, const char 
     log(_("Generating backtrace"));
 
     unsigned i = 0;
-    char *args[25];
+    char *args[27];
     args[i++] = (char*)GDB;
     args[i++] = (char*)"-batch";
     struct strbuf *set_debug_file_directory = strbuf_new();
@@ -297,6 +308,13 @@ char *get_backtrace(const char *dump_dir_name, unsigned timeout_sec, const char 
         args[i++] = xasprintf("add-auto-load-scripts-directory %s", debug_directories->buf);
 
         strbuf_free(debug_directories);
+    }
+
+    char *sysroot_cmd = NULL;
+    if (sysroot != NULL)
+    {
+        args[i++] = (char*)"-ex";
+        args[i++] = sysroot_cmd = xasprintf("set sysroot %s", sysroot);
     }
 
     args[i++] = (char*)"-ex";
@@ -399,6 +417,9 @@ char *get_backtrace(const char *dump_dir_name, unsigned timeout_sec, const char 
             full = "";
         }
     }
+
+    if (sysroot_cmd != NULL)
+        free(sysroot_cmd);
 
     if (auto_load_base_index > 0)
     {
