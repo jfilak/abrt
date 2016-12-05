@@ -45,12 +45,19 @@ void free_abrt_conf_data()
 
 /* Beware - the function normalizes only slashes - that's the most often
  * problem we have to face.
+ *
+ * The function also trims leading and trailing whitespace.
  */
 static char *xstrdup_normalized_path(const char *path)
 {
+    /* ignore leading whitespace */
+    while (isspace(*path))
+        ++path;
+
     const size_t len = strlen(path);
     char *const res = xzalloc(len + 1);
 
+    /* copy path */
     res[0] = path[0];
 
     const char *p = path + 1;
@@ -58,6 +65,14 @@ static char *xstrdup_normalized_path(const char *path)
     for (; p - path < len; ++p)
         if (*p != '/' || *r != '/')
             *++r = *p;
+
+    /* remove trailing whitespace */
+    char *mark = r;
+    while (isspace(*r) && r != res)
+        --r;
+
+    if (mark != r)
+        r[1] = '\0';
 
     /* remove trailing slash if the path is not '/' */
     if (r - res > 1 && *r == '/')

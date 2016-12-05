@@ -3,11 +3,8 @@
 
 AT_BANNER([abrt_conf])
 
-AT_TESTFUN([load_abrt_conf_normalized_paths],
-[[
-/* This will tell gcc to show message in this AT file. */
-#line 10 "abrt_conf.at"
-
+AT_TESTFUN([load_abrt_conf_normalized_paths], [[
+#include <libreport/helpers/testsuite.h>
 #include "libabrt.h"
 #include <assert.h>
 
@@ -63,15 +60,7 @@ void test(struct result **res)
 
     for (struct result **iter = res; NULL != *iter; ++iter)
     {
-        if ((    (*(*iter)->global_option != NULL && (*iter)->expected == NULL)
-              || (*(*iter)->global_option == NULL && (*iter)->expected != NULL))
-           ||
-            (    (*(*iter)->global_option != NULL && (*iter)->expected != NULL)
-              && (strcmp(*(*iter)->global_option, (*iter)->expected) != 0)))
-        {
-            fprintf(stderr, "Real != Expected :: '%s' != '%s'\n", *(*iter)->global_option, (*iter)->expected);
-            abort();
-        }
+        TS_ASSERT_STRING_EQ(*(*iter)->global_option, (*iter)->expected, "Configured value");
     }
 
     free_abrt_conf_data();
@@ -94,9 +83,16 @@ int main(int argc, char *argv[])
             .expected = "/opt/bar/abrt",
         };
 
+        struct result res_sysroot_path = {
+            .line = "SysRootPath = /opt/bar/abrt\n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/opt/bar/abrt",
+        };
+
         struct result *results[] = {
             &res_dump_location,
             &res_archive_dir,
+            &res_sysroot_path,
             NULL,
         };
 
@@ -116,9 +112,16 @@ int main(int argc, char *argv[])
             .expected = "/opt/bar/abrt",
         };
 
+        struct result res_sysroot_path = {
+            .line = "SysRootPath = /opt/bar/abrt////\n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/opt/bar/abrt",
+        };
+
         struct result *results[] = {
             &res_dump_location,
             &res_archive_dir,
+            &res_sysroot_path,
             NULL,
         };
 
@@ -138,9 +141,16 @@ int main(int argc, char *argv[])
             .expected = "/opt/bar/abrt",
         };
 
+        struct result res_sysroot_path = {
+            .line = "SysRootPath = /opt//bar///abrt\n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/opt/bar/abrt",
+        };
+
         struct result *results[] = {
             &res_dump_location,
             &res_archive_dir,
+            &res_sysroot_path,
             NULL,
         };
 
@@ -160,9 +170,74 @@ int main(int argc, char *argv[])
             .expected = "/",
         };
 
+        struct result res_sysroot_path = {
+            .line = "SysRootPath = /////\n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/",
+        };
+
         struct result *results[] = {
             &res_dump_location,
             &res_archive_dir,
+            &res_sysroot_path,
+            NULL,
+        };
+
+        test(results);
+    }
+
+    {
+        struct result res_dump_location = {
+            .line = "DumpLocation =    /////   \n",
+            .global_option = (const char *const *)&g_settings_dump_location,
+            .expected = "/",
+        };
+
+        struct result res_archive_dir = {
+            .line = "WatchCrashdumpArchiveDir =    /////   \n",
+            .global_option = (const char *const *)&g_settings_sWatchCrashdumpArchiveDir,
+            .expected = "/",
+        };
+
+        struct result res_sysroot_path = {
+            .line = "SysRootPath =    /////   \n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/",
+        };
+
+        struct result *results[] = {
+            &res_dump_location,
+            &res_archive_dir,
+            &res_sysroot_path,
+            NULL,
+        };
+
+        test(results);
+    }
+
+    {
+        struct result res_dump_location = {
+            .line = "DumpLocation =    /////some   white/space  in  /path  ///   \n",
+            .global_option = (const char *const *)&g_settings_dump_location,
+            .expected = "/some   white/space  in  /path  ",
+        };
+
+        struct result res_archive_dir = {
+            .line = "WatchCrashdumpArchiveDir =    /////some   white/space  in  /path  ///  \n",
+            .global_option = (const char *const *)&g_settings_sWatchCrashdumpArchiveDir,
+            .expected = "/some   white/space  in  /path  ",
+        };
+
+        struct result res_sysroot_path = {
+            .line = "SysRootPath =    /////some   white/space  in  /path  ///  \n",
+            .global_option = (const char *const *)&g_settings_sysroot_path,
+            .expected = "/some   white/space  in  /path  ",
+        };
+
+        struct result *results[] = {
+            &res_dump_location,
+            &res_archive_dir,
+            &res_sysroot_path,
             NULL,
         };
 
