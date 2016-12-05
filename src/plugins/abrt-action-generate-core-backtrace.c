@@ -33,6 +33,7 @@ int main(int argc, char **argv)
     abrt_init(argv);
 
     const char *dump_dir_name = ".";
+    const char *chroot = NULL;
     int raw_fingerprints = 0; /* must be _int_, OPT_BOOL expects that! */
 
     /* Can't keep these strings/structs static: _() doesn't support that */
@@ -45,12 +46,14 @@ int main(int argc, char **argv)
         OPT_v = 1 << 0,
         OPT_d = 1 << 1,
         OPT_r = 1 << 2,
+        OPT_R = 1 << 3,
     };
     /* Keep enum above and order of options below in sync! */
     struct options program_options[] = {
         OPT__VERBOSE(&g_verbose),
         OPT_STRING('d', NULL, &dump_dir_name, "DIR", _("Problem directory")),
         OPT_BOOL('r', "raw", &raw_fingerprints, _("Do not hash fingerprints")),
+        OPT_STRING('R', "chroot", &chroot, "CHROOTDIR", _("Use the path as the system root")),
         OPT_END()
     };
     /*unsigned opts =*/ parse_opts(argc, argv, program_options, program_usage_string);
@@ -75,7 +78,10 @@ int main(int argc, char **argv)
     /* The value 240 was taken from abrt-action-generate-backtrace.c. */
     int exec_timeout_sec = 240;
 
-    char *gdb_output = get_backtrace(dump_dir_name, exec_timeout_sec, NULL);
+    char *gdb_output = get_backtrace_in_sysroot(dump_dir_name,
+                                                exec_timeout_sec,
+                                                NULL,
+                                                chroot);
     if (!gdb_output)
     {
         log(_("Error: GDB did not return any data"));

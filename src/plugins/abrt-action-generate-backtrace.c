@@ -36,6 +36,7 @@ int main(int argc, char **argv)
     abrt_init(argv);
 
     char *i_opt = NULL;
+    char *chroot = NULL;
 
     /* Can't keep these strings/structs static: _() doesn't support that */
     const char *program_usage_string = _(
@@ -48,6 +49,7 @@ int main(int argc, char **argv)
         OPT_d = 1 << 1,
         OPT_i = 1 << 2,
         OPT_t = 1 << 3,
+        OPT_r = 1 << 4,
     };
     /* Keep enum above and order of options below in sync! */
     struct options program_options[] = {
@@ -55,6 +57,7 @@ int main(int argc, char **argv)
         OPT_STRING( 'd', NULL, &dump_dir_name   , "DIR"           , _("Problem directory")),
         OPT_STRING( 'i', NULL, &i_opt           , "DIR1[:DIR2]...", _("Additional debuginfo directories")),
         OPT_INTEGER('t', NULL, &exec_timeout_sec,                   _("Kill gdb if it runs for more than NUM seconds")),
+        OPT_STRING( 'r', "chroot", &chroot, "CHROOTDIR", _("Use the path as the system root")),
         OPT_END()
     };
     /*unsigned opts =*/ parse_opts(argc, argv, program_options, program_usage_string);
@@ -78,8 +81,12 @@ int main(int argc, char **argv)
         debuginfo_dirs = xasprintf("%s:%s", debuginfo_location, i_opt);
 
     /* Create gdb backtrace */
-    char *backtrace = get_backtrace(dump_dir_name, exec_timeout_sec,
-            (debuginfo_dirs) ? debuginfo_dirs : debuginfo_location);
+    char *backtrace = get_backtrace_in_sysroot(
+                        dump_dir_name,
+                        exec_timeout_sec,
+                        (debuginfo_dirs) ? debuginfo_dirs : debuginfo_location,
+                        chroot);
+
     free(debuginfo_location);
     if (!backtrace)
     {
