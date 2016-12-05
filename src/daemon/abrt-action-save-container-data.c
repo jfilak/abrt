@@ -247,7 +247,7 @@ int main(int argc, char **argv)
     abrt_init(argv);
 
     const char *dump_dir_name = ".";
-    const char *root_dir = NULL;
+    const char *root_dir = g_settings_sysroot_path;
 
     /* Can't keep these strings/structs static: _() doesn't support that */
     const char *program_usage_string = _(

@@ -113,6 +113,7 @@ abrt_action_save_container_data_CPPFLAGS = \
     $(JSON_C_CFLAGS) \
     -D_GNU_SOURCE
 abrt_action_save_container_data_LDADD = \
+    ../lib/libabrt.la \
     $(LIBREPORT_LIBS) \
     $(JSON_C_LIBS)
 

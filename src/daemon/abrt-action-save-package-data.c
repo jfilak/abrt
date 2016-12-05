@@ -433,7 +433,7 @@ int main(int argc, char **argv)
 
     const char *dump_dir_name = ".";
     const char *conf_filename = NULL;
-    const char *chroot = NULL;
+    const char *chroot = g_settings_sysroot_path;
 
     /* Can't keep these strings/structs static: _() doesn't support that */
     const char *program_usage_string = _(
