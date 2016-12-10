@@ -106,10 +106,22 @@ int xorg_crash_info_save_in_dump_dir(struct xorg_crash_info *crash_info, struct 
      */
     if (!crash_info->exe)
     {
-        if (access("/usr/bin/Xorg", X_OK) == 0)
-            crash_info->exe = xstrdup("/usr/bin/Xorg");
+        const char *xorg_path = "/usr/bin/Xorg";
+        char *xorg_real_path = (char *)xorg_path;
+
+        /* If we are running in a change root environment, we must not test
+         * existence of the file in our system root directory.
+         */
+        if (g_settings_sysroot_path != NULL)
+            xorg_real_path = concat_path_file(g_settings_sysroot_path, xorg_path);
+
+        if (access(xorg_real_path, X_OK) == 0)
+            crash_info->exe = xstrdup(xorg_path);
         else
             crash_info->exe = xstrdup("/usr/bin/X");
+
+        if (xorg_path != xorg_real_path)
+            free(xorg_real_path);
     }
     dd_save_text(dd, FILENAME_EXECUTABLE, crash_info->exe);
 
