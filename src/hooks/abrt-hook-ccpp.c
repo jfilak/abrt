@@ -932,9 +932,7 @@ int main(int argc, char** argv)
     {
         int i;
         for (i = 1; argv[i]; i++)
-        {
             strchrnul(argv[i], ' ')[0] = '\0';
-        }
     }
 
     const char *pid_str = argv[3];
@@ -1139,9 +1137,7 @@ int main(int argc, char** argv)
     pid_t tid = -1;
     const char *tid_str = argv[8];
     if (tid_str)
-    {
         tid = xatoi_positive(tid_str);
-    }
 
     if (setting_StandaloneHook)
         ensure_writable_dir(g_settings_dump_location, DEFAULT_DUMP_LOCATION_MODE, "abrt");
@@ -1156,9 +1152,7 @@ int main(int argc, char** argv)
     unsigned path_len = snprintf(path, sizeof(path), "%s/ccpp-%s-%lu.new",
             g_settings_dump_location, iso_date_string(NULL), (long)pid);
     if (path_len >= (sizeof(path) - sizeof("/"FILENAME_COREDUMP)))
-    {
         return create_user_core(user_core_fd, pid, ulimit_c);
-    }
 
     /* If you don't want to have fs owner as root then:
      *
@@ -1251,11 +1245,8 @@ int main(int argc, char** argv)
         if (tid_str)
             dd_save_text(dd, FILENAME_TID, tid_str);
 
-        if (rootdir)
-        {
-            if (strcmp(rootdir, "/") != 0)
-                dd_save_text(dd, FILENAME_ROOTDIR, rootdir);
-        }
+        if (rootdir && strcmp(rootdir, "/") != 0)
+            dd_save_text(dd, FILENAME_ROOTDIR, rootdir);
         free(rootdir);
 
         char *reason = xasprintf("%s killed by SIG%s",
@@ -1272,12 +1263,9 @@ int main(int argc, char** argv)
         free(environ);
 
         char *fips_enabled = xmalloc_fopen_fgetline_fclose("/proc/sys/crypto/fips_enabled");
-        if (fips_enabled)
-        {
-            if (strcmp(fips_enabled, "0") != 0)
-                dd_save_text(dd, "fips_enabled", fips_enabled);
-            free(fips_enabled);
-        }
+        if (fips_enabled && strcmp(fips_enabled, "0") != 0)
+            dd_save_text(dd, "fips_enabled", fips_enabled);
+        free(fips_enabled);
 
         dd_save_text(dd, FILENAME_ABRT_VERSION, VERSION);
 
@@ -1302,14 +1290,11 @@ int main(int argc, char** argv)
                     "bug tracking tools");
         }
 
-        if (setting_SaveBinaryImage)
+        if (setting_SaveBinaryImage && save_crashing_binary(pid, dd))
         {
-            if (save_crashing_binary(pid, dd))
-            {
-                error_msg("Error saving '%s'", path);
+            error_msg("Error saving '%s'", path);
 
-                goto cleanup_and_exit;
-            }
+            goto cleanup_and_exit;
         }
 
         size_t core_size = 0;
