@@ -19,6 +19,99 @@
 #include "libabrt.h"
 #include <json.h>
 
+/* Check if the container's source device is mounted somewhere in the host.
+ */
+static char *get_docker_container_root_dir(struct mountinfo *problem_root)
+{
+    char *target_dir = NULL;
+    char *cmd = xasprintf("findmnt" \
+                          " --raw" \
+                          " --noheadings" \
+                          " --notruncate" \
+                          " --canonicalize" \
+                          " --tab-file /proc/1/mountinfo" \
+                          " --output TARGET" \
+                          " --source %s",
+                          MOUNTINFO_MOUNT_SOURCE((*problem_root)));
+
+    log_debug("Executing: %s", cmd);
+
+    FILE *pfindmnt = popen(cmd, "re");
+    if (pfindmnt == NULL)
+    {
+        perror_msg("Cannot use findmnt to get container's root directory");
+        goto cleanup;
+    }
+
+    const char *fsroot = MOUNTINFO_ROOT((*problem_root));
+    const size_t fsroot_len = strlen(fsroot);
+
+    /* Read all lines printed out by findmnt. The source device can be mounted
+     * several times. We are seeking a mount point that is either in the
+     * target_dir[rootfs] format or just the target_dir format. In the former
+     * case we must remove the square backets. In the latter case must append
+     * the rootfs part, which is passed as an argument by a callee.
+     */
+    for (;;)
+    {
+        char *findmnt_line = xmalloc_fgetline(pfindmnt);
+
+        /* The functions does not set errno. We want to first check EOF and
+         * then errors. */
+        if (feof(pfindmnt))
+            break;
+
+        if (ferror(pfindmnt))
+        {
+            perror_msg("Failed to read ouptut of findmnt");
+            break;
+        }
+
+        if (findmnt_line == NULL)
+        {
+            error_msg("I/O error while reading ouptut of findmnt");
+            break;
+        }
+
+        /* Check if the mount point is for the fsroot directory:
+         *   target_directory[fsroot]
+         */
+        char *fsroot_part = strchr(findmnt_line, '[');
+        if (fsroot_part != NULL)
+        {
+            if (strncmp(fsroot_part + 1, fsroot, fsroot_len) == 0 &&
+                fsroot_part[1 + fsroot_len + 1] == ']')
+            {   /* Remove square brackets. */
+                strcpy(fsroot_part, fsroot);
+                fsroot_part[fsroot_len] = '\0';
+
+                /* Free a device target result. */
+                if (target_dir != NULL)
+                    free(target_dir);
+
+                target_dir = findmnt_line;
+
+                /* Exit the loop as there is no need to test more results. The
+                 * target directory created from the same fsroot is the best
+                 * match. */
+                break;
+            }
+        }
+        else if (target_dir == NULL)
+            target_dir = concat_path_file(findmnt_line, fsroot);
+
+        free(findmnt_line);
+    }
+
+    if (pclose(pfindmnt) != 0)
+        perror_msg("findmnt has failed when getting container's root directory");
+
+cleanup:
+    free(cmd);
+
+    return target_dir;
+}
+
 void dump_docker_info(struct dump_dir *dd, const char *root_dir)
 {
     if (!dd_exist(dd, FILENAME_CONTAINER))
@@ -132,12 +225,26 @@ void dump_docker_info(struct dump_dir *dd, const char *root_dir)
 
         break;
     }
-    fclose(mntnf_file);
 
     if (container_id == NULL)
     {
         error_msg("Could not inspect the container");
         goto dump_docker_info_cleanup;
+    }
+
+    mountinfo_destroy(&mntnf);
+    rewind(mntnf_file);
+    int r = get_mountinfo_for_mount_point(mntnf_file, &mntnf, "/");
+    if (r != 0)
+        log_debug("Mount point for / not found");
+    else
+    {
+        char *syspath_to_root = get_docker_container_root_dir(&mntnf);
+
+        if (syspath_to_root)
+            dd_save_text(dd, FILENAME_CONTAINER_ROOTFS, syspath_to_root);
+        else
+            error_msg("Could not determine container's root directory");
     }
 
     dd_save_text(dd, FILENAME_CONTAINER_ID, container_id);
@@ -178,6 +285,8 @@ void dump_docker_info(struct dump_dir *dd, const char *root_dir)
     free(name);
 
 dump_docker_info_cleanup:
+    fclose(mntnf_file);
+
     if (json != NULL)
         json_object_put(json);
 
