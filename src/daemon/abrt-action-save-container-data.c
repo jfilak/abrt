@@ -28,6 +28,11 @@ void dump_docker_info(struct dump_dir *dd, const char *root_dir)
     char *mntnf_path = concat_path_file(dd->dd_dirname, FILENAME_MOUNTINFO);
     FILE *mntnf_file = fopen(mntnf_path, "r");
     free(mntnf_path);
+    if (mntnf_file == NULL)
+    {
+        perror_msg("Cannot open mountinfo file");
+        return;
+    }
 
     struct mount_point {
         const char *name;
