@@ -59,6 +59,8 @@ char *run_unstrip_n(const char *dump_dir_name, unsigned timeout_sec);
 char *get_backtrace(const char *dump_dir_name, unsigned timeout_sec, const char *debuginfo_dirs);
 #define get_backtrace_in_chroot abrt_get_backtrace_in_chroot
 char *get_backtrace_in_sysroot(const char *dump_dir_name, unsigned timeout_sec, const char *debuginfo_dirs, const char *chroot);
+#define get_problem_sys_root_path_from_dump_dir abrt_get_problem_sys_root_path_from_dump_dir
+char *get_problem_sys_root_path_from_dump_dir(struct dump_dir *dd);
 
 #define dir_is_in_dump_location abrt_dir_is_in_dump_location
 bool dir_is_in_dump_location(const char *dir_name);

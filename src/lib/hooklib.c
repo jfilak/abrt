@@ -239,6 +239,31 @@ char *run_unstrip_n(const char *dump_dir_name, unsigned timeout_sec)
     return strbuf_free_nobuf(buf_out);
 }
 
+static char *append_dd_text_if_exists(char *path, struct dump_dir *dd, const char *text_name)
+{
+    const int flags = DD_LOAD_TEXT_RETURN_NULL_ON_FAILURE | DD_FAIL_QUIETLY_ENOENT;
+
+    char *suffix = dd_load_text_ext(dd, text_name, flags);
+    if (!suffix)
+        return path;
+
+    char *tmp = concat_path_file(path, suffix);
+    free(suffix);
+    free(path);
+    return tmp;
+}
+
+char *get_problem_sys_root_path_from_dump_dir(struct dump_dir *dd)
+{
+    char *path = g_settings_sysroot_path ? xstrdup(g_settings_sysroot_path )
+                                         : xstrdup("/");
+
+    path = append_dd_text_if_exists(path, dd, FILENAME_CONTAINER_ROOTFS);
+    path = append_dd_text_if_exists(path, dd, FILENAME_ROOTDIR);
+
+    return path;
+}
+
 char *get_backtrace(const char *dump_dir_name, unsigned timeout_sec, const char *debuginfo_dirs)
 {
     return get_backtrace_in_sysroot(dump_dir_name,

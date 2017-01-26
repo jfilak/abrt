@@ -107,3 +107,55 @@ int main(void)
     return 0;
 }
 ]])
+
+AT_TESTFUN([get_problem_sys_root_path_from_dump_dir], [[
+#include <helpers/testsuite.h>
+#include <helpers/testsuite_tools.h>
+
+#include "libabrt.h"
+
+void test_case(const char *sysroot,
+               const char *containerroot,
+               const char *chroot,
+               const char *result)
+{
+    TS_PRINTF("++++ Case: %s %s %s\n", sysroot, containerroot, chroot);
+
+    struct dump_dir *dd = testsuite_dump_dir_create(getuid(),
+                                                    /*0640*/ (mode_t)-1,
+                                                    /*unused flags*/0);
+
+    g_settings_sysroot_path = (char *)sysroot;
+
+    if (containerroot)
+        dd_save_text(dd, FILENAME_CONTAINER_ROOTFS, containerroot);
+
+    if (chroot)
+        dd_save_text(dd, FILENAME_ROOTDIR, chroot);
+
+    char *rootdir = get_problem_sys_root_path_from_dump_dir(dd);
+
+    TS_ASSERT_STRING_EQ(rootdir, result, "");
+
+    free(rootdir);
+
+    g_settings_sysroot_path = NULL;
+
+    testsuite_dump_dir_delete(dd);
+
+    TS_PRINTF("---- End Case: %s %s %s\n", sysroot, containerroot, chroot);
+}
+
+TS_MAIN
+{
+    test_case(NULL,       NULL,      NULL,      "/");
+    test_case("/sysroot", NULL,      NULL,      "/sysroot");
+    test_case(NULL,       "/ctroot", NULL,      "/ctroot");
+    test_case("/sysroot", "/ctroot", NULL,      "/sysroot/ctroot");
+    test_case(NULL,       NULL,      "/chroot", "/chroot");
+    test_case("/sysroot", NULL,      "/chroot", "/sysroot/chroot");
+    test_case(NULL,       "/ctroot", "/chroot", "/ctroot/chroot");
+    test_case("/sysroot", "/ctroot", "/chroot", "/sysroot/ctroot/chroot");
+}
+TS_RETURN_MAIN
+]])
