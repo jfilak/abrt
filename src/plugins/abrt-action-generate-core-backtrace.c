@@ -63,6 +63,16 @@ int main(int argc, char **argv)
     if (g_verbose > 1)
         sr_debug_parser = true;
 
+    struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags*/0);
+    if (dd == NULL)
+        xfunc_die();
+
+    char *problem_chroot = NULL;
+    if (chroot == NULL)
+        chroot = problem_chroot = get_problem_sys_root_path_from_dump_dir(dd);
+
+    dd_close(dd);
+
     /* Let user know what's going on */
     log_notice(_("Generating core_backtrace"));
 
@@ -82,6 +92,9 @@ int main(int argc, char **argv)
                                                 exec_timeout_sec,
                                                 NULL,
                                                 chroot);
+
+    free(problem_chroot);
+
     if (!gdb_output)
     {
         log(_("Error: GDB did not return any data"));

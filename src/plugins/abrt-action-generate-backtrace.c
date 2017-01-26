@@ -80,12 +80,22 @@ int main(int argc, char **argv)
     if (i_opt)
         debuginfo_dirs = xasprintf("%s:%s", debuginfo_location, i_opt);
 
+    struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags*/ 0);
+    if (dd == NULL)
+        xfunc_die();
+
+    char *problem_chroot = NULL;
+    if (chroot == NULL)
+        chroot = problem_chroot = get_problem_sys_root_path_from_dump_dir(dd);
+
     /* Create gdb backtrace */
     char *backtrace = get_backtrace_in_sysroot(
                         dump_dir_name,
                         exec_timeout_sec,
                         (debuginfo_dirs) ? debuginfo_dirs : debuginfo_location,
                         chroot);
+
+    free(problem_chroot);
 
     free(debuginfo_location);
     if (!backtrace)
@@ -98,9 +108,6 @@ int main(int argc, char **argv)
 
     /* Store gdb backtrace */
 
-    struct dump_dir *dd = dd_opendir(dump_dir_name, /*flags:*/ 0);
-    if (!dd)
-        return 1;
     dd_save_text(dd, FILENAME_BACKTRACE, backtrace);
     dd_close(dd);
 
